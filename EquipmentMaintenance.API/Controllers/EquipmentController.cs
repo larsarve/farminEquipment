@@ -6,6 +6,7 @@ using EquipmentMaintenance.API.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
 
 namespace EquipmentMaintenance.API.Controllers
 {
@@ -53,6 +54,31 @@ namespace EquipmentMaintenance.API.Controllers
                     return BadRequest(new { message = "Equipment name is required" });
                 }
 
+                if (string.IsNullOrEmpty(equipment.Type))
+                {
+                    _logger.LogWarning("Attempted to add equipment with empty type");
+                    return BadRequest(new { message = "Equipment type is required" });
+                }
+
+                // Validate dates
+                if (equipment.PurchaseDate == default)
+                {
+                    _logger.LogWarning("Attempted to add equipment with invalid purchase date");
+                    return BadRequest(new { message = "Valid purchase date is required" });
+                }
+
+                if (equipment.LastMaintenanceDate == default)
+                {
+                    _logger.LogWarning("Attempted to add equipment with invalid last maintenance date");
+                    return BadRequest(new { message = "Valid last maintenance date is required" });
+                }
+
+                if (equipment.NextMaintenanceDate == default)
+                {
+                    _logger.LogWarning("Attempted to add equipment with invalid next maintenance date");
+                    return BadRequest(new { message = "Valid next maintenance date is required" });
+                }
+
                 var newEquipment = await _equipmentService.AddEquipment(equipment);
                 _logger.LogInformation("Successfully added equipment with ID: {Id}", newEquipment.Id);
                 return CreatedAtAction(nameof(GetEquipment), new { id = newEquipment.Id }, newEquipment);
@@ -83,7 +109,7 @@ namespace EquipmentMaintenance.API.Controllers
         }
 
         [HttpGet("maintenance-tasks")]
-        public async Task<ActionResult<List<MaintenanceTask>>> GetAllMaintenanceTasks()
+        public async Task<ActionResult<IEnumerable<MaintenanceTask>>> GetAllMaintenanceTasks()
         {
             var tasks = await _equipmentService.GetAllMaintenanceTasks();
             return Ok(tasks);

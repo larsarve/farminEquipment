@@ -5,28 +5,39 @@ import {
   Button,
   Card,
   CardContent,
-  Grid,
-  Typography,
+  Container,
   Dialog,
-  DialogTitle,
-  DialogContent,
   DialogActions,
+  DialogContent,
+  DialogTitle,
+  Grid,
   TextField,
+  Typography,
 } from '@mui/material';
 import { Add as AddIcon } from '@mui/icons-material';
 import { Equipment } from '../types';
 import { equipmentApi } from '../services/api';
+import { AxiosError } from 'axios';
+
+interface ValidationErrorResponse {
+  type: string;
+  title: string;
+  status: number;
+  errors: Record<string, string[]>;
+  traceId: string;
+}
 
 const EquipmentList: React.FC = () => {
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
   const [newEquipment, setNewEquipment] = useState<Omit<Equipment, 'id'>>({
     name: '',
     description: '',
+    type: '',
     maintenanceTasks: [],
     maintenanceHistory: []
   });
-  const navigate = useNavigate();
 
   useEffect(() => {
     loadEquipment();
@@ -38,45 +49,68 @@ const EquipmentList: React.FC = () => {
       setEquipment(response.data);
     } catch (error) {
       console.error('Error loading equipment:', error);
+      handleError(error);
     }
   };
 
-  const handleOpen = () => setOpen(true);
-  const handleClose = () => setOpen(false);
+  const handleError = (error: unknown) => {
+    if (error instanceof AxiosError && error.response?.data) {
+      const errorData = error.response.data as ValidationErrorResponse;
+      if (errorData.errors) {
+        // Combine all validation errors into a single message
+        const errorMessages = Object.entries(errorData.errors)
+          .map(([field, messages]) => `${field}: ${messages.join(', ')}`)
+          .join('\n');
+        alert(`Validation errors:\n${errorMessages}`);
+      } else if (errorData.title) {
+        alert(errorData.title);
+      } else {
+        alert('An error occurred while processing your request');
+      }
+    } else {
+      alert('An unexpected error occurred');
+    }
+  };
 
-  const handleSubmit = async () => {
+  const handleClickOpen = () => {
+    setOpen(true);
+  };
+
+  const handleClose = () => {
+    setOpen(false);
+    setNewEquipment({
+      name: '',
+      description: '',
+      type: '',
+      maintenanceTasks: [],
+      maintenanceHistory: []
+    });
+  };
+
+  const handleAddEquipment = async () => {
     try {
-      console.log('Submitting new equipment:', JSON.stringify(newEquipment, null, 2));
+      console.log('Sending equipment data:', JSON.stringify(newEquipment, null, 2));
       const response = await equipmentApi.create(newEquipment);
-      console.log('Response from server:', response.data);
+      console.log('Server response:', response.data);
       handleClose();
       loadEquipment();
-      setNewEquipment({
-        name: '',
-        description: '',
-        maintenanceTasks: [],
-        maintenanceHistory: []
-      });
     } catch (error) {
-      console.error('Error creating equipment:', error);
-      if (error instanceof Error) {
-        alert(`Error creating equipment: ${error.message}`);
-      } else {
-        alert('Error creating equipment. Please try again.');
-      }
+      console.error('Error adding equipment:', error);
+      handleError(error);
     }
   };
 
   return (
-    <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
+    <Container>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4 }}>
         <Typography variant="h4" component="h1">
           Equipment List
         </Typography>
         <Button
           variant="contained"
+          color="primary"
           startIcon={<AddIcon />}
-          onClick={handleOpen}
+          onClick={handleClickOpen}
         >
           Add Equipment
         </Button>
@@ -94,7 +128,7 @@ const EquipmentList: React.FC = () => {
                   {item.name}
                 </Typography>
                 <Typography color="textSecondary" gutterBottom>
-                  {item.description}
+                  Type: {item.type}
                 </Typography>
                 <Typography variant="body2">
                   Maintenance Tasks: {item.maintenanceTasks.length}
@@ -121,19 +155,26 @@ const EquipmentList: React.FC = () => {
             label="Description"
             fullWidth
             multiline
-            rows={4}
+            rows={3}
             value={newEquipment.description}
             onChange={(e) => setNewEquipment({ ...newEquipment, description: e.target.value })}
+          />
+          <TextField
+            margin="dense"
+            label="Type"
+            fullWidth
+            value={newEquipment.type}
+            onChange={(e) => setNewEquipment({ ...newEquipment, type: e.target.value })}
           />
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose}>Cancel</Button>
-          <Button onClick={handleSubmit} variant="contained">
+          <Button onClick={handleAddEquipment} color="primary">
             Add
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </Container>
   );
 };
 

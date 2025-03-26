@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using EquipmentMaintenance.API.Models;
 using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore;
 
 namespace EquipmentMaintenance.API.Services
 {

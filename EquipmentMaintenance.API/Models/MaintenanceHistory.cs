@@ -16,5 +16,8 @@ namespace EquipmentMaintenance.API.Models
 
         [JsonPropertyName("equipmentId")]
         public string EquipmentId { get; set; }
+
+        [JsonPropertyName("equipmentName")]
+        public string EquipmentName { get; set; }
     }
 } 

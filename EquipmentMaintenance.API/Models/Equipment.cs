@@ -15,6 +15,9 @@ namespace EquipmentMaintenance.API.Models
         [JsonPropertyName("description")]
         public string Description { get; set; }
 
+        [JsonPropertyName("type")]
+        public string Type { get; set; }
+
         [JsonPropertyName("maintenanceTasks")]
         public List<MaintenanceTask> MaintenanceTasks { get; set; } = new List<MaintenanceTask>();
 

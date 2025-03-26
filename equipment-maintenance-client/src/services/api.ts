@@ -9,35 +9,27 @@ const api = axios.create({
 
 // Add request interceptor for logging
 api.interceptors.request.use(request => {
-    console.log('Request:', {
+    console.log('Request Details:', {
         url: request.url,
         method: request.method,
-        data: JSON.stringify(request.data, null, 2),
+        data: request.data,
+        parsedData: request.data ? JSON.parse(JSON.stringify(request.data)) : null,
         headers: request.headers
     });
     return request;
 });
 
-// Add response interceptor for logging
+// Add response interceptor for error logging
 api.interceptors.response.use(
-    response => {
-        console.log('Response:', {
-            status: response.status,
-            data: JSON.stringify(response.data, null, 2)
-        });
-        return response;
-    },
+    response => response,
     error => {
-        console.error('API Error:', {
-            status: error.response?.status,
-            data: error.response?.data ? JSON.stringify(error.response.data, null, 2) : 'No data',
-            message: error.message,
-            config: {
-                url: error.config?.url,
-                method: error.config?.method,
-                data: error.config?.data ? JSON.stringify(JSON.parse(error.config.data), null, 2) : 'No data'
-            }
-        });
+        if (error.response) {
+            console.error('Response Error:', {
+                status: error.response.status,
+                data: error.response.data,
+                headers: error.response.headers
+            });
+        }
         return Promise.reject(error);
     }
 );

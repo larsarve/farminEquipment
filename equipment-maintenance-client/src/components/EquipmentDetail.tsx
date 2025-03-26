@@ -22,8 +22,8 @@ import {
   Divider,
 } from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
-import { format } from 'date-fns';
-import { Equipment, MaintenanceTask } from '../types';
+import { format, isValid, parseISO } from 'date-fns';
+import { Equipment, MaintenanceTask, MaintenanceHistory } from '../types';
 import { equipmentApi } from '../services/api';
 
 const EquipmentDetail: React.FC = () => {
@@ -42,6 +42,14 @@ const EquipmentDetail: React.FC = () => {
   const loadEquipment = async () => {
     try {
       const response = await equipmentApi.getById(id!);
+      console.log('Received equipment data:', {
+        id: response.data.id,
+        name: response.data.name,
+        type: response.data.type,
+        description: response.data.description,
+        maintenanceTasks: response.data.maintenanceTasks,
+        maintenanceHistory: response.data.maintenanceHistory
+      });
       setEquipment(response.data);
     } catch (error) {
       console.error('Error loading equipment:', error);
@@ -60,16 +68,15 @@ const EquipmentDetail: React.FC = () => {
       dueDate: newTask.dueDate,
       isCompleted: false,
       equipmentId: equipment.id,
-    };
-
-    const updatedEquipment = {
-      ...equipment,
-      maintenanceTasks: [...equipment.maintenanceTasks, newMaintenanceTask],
+      equipmentName: equipment.name
     };
 
     try {
-      await equipmentApi.update(equipment.id, updatedEquipment);
-      setEquipment(updatedEquipment);
+      const updatedEquipment = await equipmentApi.update(equipment.id, {
+        ...equipment,
+        maintenanceTasks: [...equipment.maintenanceTasks, newMaintenanceTask]
+      });
+      setEquipment(updatedEquipment.data);
       handleClose();
       setNewTask({ description: '', dueDate: '' });
     } catch (error) {
@@ -84,11 +91,12 @@ const EquipmentDetail: React.FC = () => {
       if (task.id === taskId) {
         const updatedTask = { ...task, isCompleted: !task.isCompleted };
         if (updatedTask.isCompleted) {
-          const historyItem = {
+          const historyItem: MaintenanceHistory = {
             id: Date.now().toString(),
             description: task.description,
             completedDate: new Date().toISOString(),
             equipmentId: equipment.id,
+            equipmentName: equipment.name
           };
           equipment.maintenanceHistory.push(historyItem);
         }
@@ -97,14 +105,12 @@ const EquipmentDetail: React.FC = () => {
       return task;
     });
 
-    const updatedEquipment = {
-      ...equipment,
-      maintenanceTasks: updatedTasks,
-    };
-
     try {
-      await equipmentApi.update(equipment.id, updatedEquipment);
-      setEquipment(updatedEquipment);
+      const updatedEquipment = await equipmentApi.update(equipment.id, {
+        ...equipment,
+        maintenanceTasks: updatedTasks
+      });
+      setEquipment(updatedEquipment.data);
     } catch (error) {
       console.error('Error updating task:', error);
     }
@@ -127,6 +133,46 @@ const EquipmentDetail: React.FC = () => {
     }
   };
 
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) {
+      console.log('No date provided');
+      return 'No date set';
+    }
+
+    try {
+      console.log('Formatting date:', dateString);
+      
+      // First try to create a new Date directly
+      let date = new Date(dateString);
+      
+      // If that's not valid, try parsing as ISO string
+      if (!isValid(date)) {
+        date = parseISO(dateString);
+      }
+      
+      console.log('Parsed date:', date);
+      
+      // If still not valid, try parsing with timezone offset
+      if (!isValid(date)) {
+        const [year, month, day] = dateString.split('-');
+        date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      }
+      
+      // If we have a valid date, format it
+      if (isValid(date)) {
+        // Adjust for timezone offset
+        date.setMinutes(date.getMinutes() + date.getTimezoneOffset());
+        return format(date, 'PPP');
+      }
+      
+      console.log('Final parsed date:', date);
+      return 'Invalid date';
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Invalid date';
+    }
+  };
+
   if (!equipment) {
     return <Typography>Loading...</Typography>;
   }
@@ -146,9 +192,21 @@ const EquipmentDetail: React.FC = () => {
         </Button>
       </Box>
 
-      <Typography variant="body1" paragraph>
-        {equipment.description}
-      </Typography>
+      <Card>
+        <CardContent>
+          <Typography variant="h5" component="h2">
+            {equipment.name}
+          </Typography>
+          <Typography color="textSecondary" gutterBottom>
+            Type: {equipment.type}
+          </Typography>
+          {equipment.description && (
+            <Typography variant="body1" paragraph>
+              Description: {equipment.description}
+            </Typography>
+          )}
+        </CardContent>
+      </Card>
 
       <Grid container spacing={3}>
         <Grid item xs={12} md={6}>
@@ -171,7 +229,7 @@ const EquipmentDetail: React.FC = () => {
                         label={
                           <ListItemText
                             primary={task.description}
-                            secondary={`Due: ${format(new Date(task.dueDate), 'PPP')}`}
+                            secondary={`Due: ${formatDate(task.dueDate)}`}
                           />
                         }
                       />
@@ -205,7 +263,7 @@ const EquipmentDetail: React.FC = () => {
                     <ListItem>
                       <ListItemText
                         primary={history.description}
-                        secondary={`Completed: ${format(new Date(history.completedDate), 'PPP')}`}
+                        secondary={`Completed: ${formatDate(history.completedDate)}`}
                       />
                     </ListItem>
                     <Divider />
