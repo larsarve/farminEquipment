@@ -1,0 +1,3 @@
+﻿<Project>
+  <Import Project="../build/EquipmentMaintenance.API.props" />
+</Project>
