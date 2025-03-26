@@ -87,28 +87,27 @@ const EquipmentDetail: React.FC = () => {
   const handleTaskToggle = async (taskId: string) => {
     if (!equipment) return;
 
-    const updatedTasks = equipment.maintenanceTasks.map((task) => {
-      if (task.id === taskId) {
-        const updatedTask = { ...task, isCompleted: !task.isCompleted };
-        if (updatedTask.isCompleted) {
-          const historyItem: MaintenanceHistory = {
-            id: Date.now().toString(),
-            description: task.description,
-            completedDate: new Date().toISOString(),
-            equipmentId: equipment.id,
-            equipmentName: equipment.name
-          };
-          equipment.maintenanceHistory.push(historyItem);
-        }
-        return updatedTask;
-      }
-      return task;
-    });
+    const taskToComplete = equipment.maintenanceTasks.find(task => task.id === taskId);
+    if (!taskToComplete) return;
+
+    // Create history item for the completed task
+    const historyItem: MaintenanceHistory = {
+      id: Date.now().toString(),
+      description: taskToComplete.description,
+      completedDate: new Date().toISOString(),
+      equipmentId: equipment.id,
+      equipmentName: equipment.name
+    };
+
+    // Remove the task from maintenanceTasks and add to maintenanceHistory
+    const updatedTasks = equipment.maintenanceTasks.filter(task => task.id !== taskId);
+    const updatedHistory = [...equipment.maintenanceHistory, historyItem];
 
     try {
       const updatedEquipment = await equipmentApi.update(equipment.id, {
         ...equipment,
-        maintenanceTasks: updatedTasks
+        maintenanceTasks: updatedTasks,
+        maintenanceHistory: updatedHistory
       });
       setEquipment(updatedEquipment.data);
     } catch (error) {

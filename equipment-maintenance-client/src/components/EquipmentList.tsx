@@ -13,8 +13,10 @@ import {
   Grid,
   TextField,
   Typography,
+  IconButton,
 } from '@mui/material';
-import { Add as AddIcon } from '@mui/icons-material';
+import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import { Link } from 'react-router-dom';
 import { Equipment } from '../types';
 import { equipmentApi } from '../services/api';
 import { AxiosError } from 'axios';
@@ -100,6 +102,18 @@ const EquipmentList: React.FC = () => {
     }
   };
 
+  const handleDeleteEquipment = async (id: string) => {
+    if (window.confirm('Are you sure you want to delete this equipment?')) {
+      try {
+        await equipmentApi.delete(id);
+        setEquipment(equipment.filter(e => e.id !== id));
+      } catch (error) {
+        console.error('Error deleting equipment:', error);
+        alert('Failed to delete equipment');
+      }
+    }
+  };
+
   return (
     <Container>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4 }}>
@@ -119,20 +133,39 @@ const EquipmentList: React.FC = () => {
       <Grid container spacing={3}>
         {equipment.map((item) => (
           <Grid item xs={12} sm={6} md={4} key={item.id}>
-            <Card
-              sx={{ height: '100%', cursor: 'pointer' }}
-              onClick={() => navigate(`/equipment/${item.id}`)}
-            >
+            <Card>
               <CardContent>
-                <Typography variant="h6" component="h2">
-                  {item.name}
-                </Typography>
-                <Typography color="textSecondary" gutterBottom>
-                  Type: {item.type}
-                </Typography>
-                <Typography variant="body2">
-                  Maintenance Tasks: {item.maintenanceTasks.length}
-                </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <Box>
+                    <Typography variant="h6" component="h2">
+                      {item.name}
+                    </Typography>
+                    <Typography color="textSecondary" gutterBottom>
+                      Type: {item.type}
+                    </Typography>
+                    {item.description && (
+                      <Typography variant="body2" color="textSecondary">
+                        {item.description}
+                      </Typography>
+                    )}
+                  </Box>
+                  <IconButton
+                    edge="end"
+                    aria-label="delete"
+                    onClick={() => handleDeleteEquipment(item.id)}
+                    color="error"
+                  >
+                    <DeleteIcon />
+                  </IconButton>
+                </Box>
+                <Button
+                  component={Link}
+                  to={`/equipment/${item.id}`}
+                  variant="outlined"
+                  sx={{ mt: 2 }}
+                >
+                  View Details
+                </Button>
               </CardContent>
             </Card>
           </Grid>
